@@ -3,9 +3,9 @@
 // Company: 
 // Engineer: 
 // 
-// Create Date: 03/20/2024 11:08:56 PM
+// Create Date: 03/19/2024 04:12:58 PM
 // Design Name: 
-// Module Name: Pipeline_Top
+// Module Name: Pipeline_top
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
@@ -20,107 +20,166 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module Pipeline_Top(clk, rst);
+module Pipeline_top(clk1_s,rst,display,display_1);
 
-input clk, rst;
+input clk1_s,rst;
+output [6:0] display;
+output [6:0] display_1;
+/// output[7:0] OLED_Display;
+/// interim wires////
+wire PCSrcE,RegWriteW,RegWriteE,MemWriteE,BranchE,ALUSrcE,RegWriteM,MemWriteM,
+StallF,StallD,FlushE,JumpE,FlushD,branch_predict,pcsrc_predict, clk;
 
-wire PCSrcE,RegWriteW,RegWriteE,MemWriteE,BranchE,AluSrcE,RegWriteM,MemWriteM;
-wire [31:0] PCTargetE,PCPlus4D,InstrD, PCD,ResultW,RD2_E,RD1_E,PCE,ImmExt_E,PCPlus4E, WriteDataM,Alu_Result_M,PCPlus4M,RdM,ReadDataW,PCPlus4W,Alu_Result_W ;
-wire [4:0] RdE, RdW;
+
+
+wire [31:0] PCTargetE,InstrD,PCD,PCPlus4D,ResultW,RD1E,RD2E,
+PCE,ImmExtE,PCPlus4E,ALUResultM,WriteDataM,PCPlus4M,ReadDataW,PCPlus4W,ALUResultW;
+
+wire [4:0] RdW,RdE,RdM,Rs1E,Rs2E,Rs2D,Rs1D;
+
+wire [1:0] ResultSrcE,ResultSrcM,ResultSrcW,ForwardAE,ForwardBE;
+
 wire [2:0] ALUControlE;
-wire [1:0] ResultSrcE,ResultSrcM,ResultSrcW; 
-wire [4:0] Rs1_E, Rs2_E;
-wire [1:0] ForwardAE,ForwardBE;
 
-fetch_cycle Fetch(.clk(clk),
-                  .rst(rst),
-                  .PCSrcE(PCSrcE),
-                  .PCTargetE(PCTargetE),
-                  .PCPlus4D(PCPlus4D),
-                  .InstrD(InstrD),
-                  .PCD(PCD));
-                  
-Decode_cycle Decode(.clk(clk),
+Fetch_Cycle Fetch_top(
+                    .clk(clk),
                     .rst(rst),
-                    .RegWriteW(RegWriteW),
-                    .RdW(RdW),
-                    .ResultW(ResultW),
+                    .PCTargetE(PCTargetE),
+                    .PCSrcE(PCSrcE),
+                   .Pcsrc_predict(pcsrc_predict),
                     .InstrD(InstrD),
                     .PCD(PCD),
-                    .PCPlus4D(PCPlus4D),
-                    .RegWriteE(RegWriteE),
-                    .AluSrcE(AluSrcE),
-                    .BranchE(BranchE),
-                    .MemWriteE(MemWriteE),
-                    .ALUControlE(ALUControlE),
-                    .ResultSrcE(ResultSrcE),
-                    .RD1_E(RD1_E),
-                    .RD2_E(RD2_E),
-                    .ImmExt_E(ImmExt_E),
-                    .PCE(PCE),
-                    .PCPlus4E(PCPlus4E),
-                    .RdE(RdE),
-                    .Rs1_E(Rs1_E),
-                    .Rs2_E(Rs2_E));      
-          
-Execute_cycle Execute(.clk(clk),
-                      .rst(rst),
-                      .RegWriteE(RegWriteE),
-                      .AluSrcE(AluSrcE),
-                      .BranchE(BranchE),
-                      .MemWriteE(MemWriteE),
-                      .ALUControlE(ALUControlE),
-                      .ResultSrcE(ResultSrcE),
-                      .RD1_E(RD1_E),
-                      .RD2_E(RD2_E),
-                      .ImmExt_E(ImmExt_E),
-                      .PCE(PCE),
-                      .PCPlus4E(PCPlus4E),
-                      .RdE(RdE),
-                      .PCTargetE(PCTargetE),
-                      .PCSrcE(PCSrcE),
-                      .RegWriteM(RegWriteM),
-                      .MemWriteM(MemWriteM),
-                      .ResultSrcM(ResultSrcM),
-                      .WriteDataM(WriteDataM),
-                      .Alu_Result_M(Alu_Result_M),
-                      .PCPlus4M(PCPlus4M),
-                      .RdM(RdM),
-                      .ResultW(ResultW),
-                      .ForwardA_E(ForwardAE),
-                      .ForwardB_E(ForwardBE));  
-                      
-Memory_cycle Memory(.clk(clk),
-                    .rst(rst),
-                    .RegWriteM(RegWriteM),
-                    .ResultSrcM(ResultSrcM),
-                    .Alu_Result_M(Alu_Result_M),
-                    .WriteDataM(WriteDataM),
-                    .RdM(RdM),
-                    .PCPlus4M(PCPlus4M),
-                    .MemWriteM(MemWriteM),
-                    .RegWriteW(RegWriteW),
-                    .RdW(RdW),
-                    .ResultSrcW(ResultSrcW),
-                    .ReadDataW(ReadDataW),
-                    .PCPlus4W(PCPlus4W),
-                    .Alu_Result_W(Alu_Result_W));         
+                    .PCPlus4D(PCPlus4D),    
+                    .EN(StallD),
+                    .StallF(StallF),
+                   .clear(FlushD)
+                    );
                     
-Writeback_cycle Write(.clk(clk), 
-                      .rst(rst),
-                      .ResultSrcW(ResultSrcW),
-                      .ReadDataW(ReadDataW),
-                      .PCPlus4W(), 
-                      .Alu_Result_W(Alu_Result_W),
-                      .ResultW(ResultW));                                                               
+Decode_cycle Decode_top(
+                        .clk(clk),
+                        .rst(rst),
+                        .RdW(RdW),
+                        .RegWriteW(RegWriteW),
+                        .RdE(RdE),
+                        .InstrD(InstrD),
+                        .ResultW(ResultW),
+                        .PCD(PCD),
+                        .PCPlus4D(PCPlus4D),
+                        .RD1E(RD1E),
+                        .RD2E(RD2E),
+                        .PCE(PCE),
+                        .ImmExtE(ImmExtE),
+                        .PCPlus4E(PCPlus4E),
+                        .RegWriteE(RegWriteE),
+                        .ResultWSrcE(ResultSrcE),
+                        .MemWriteE(MemWriteE),
+                        .BranchE(BranchE),
+                        .ALUControlE(ALUControlE),
+                        .ALUSrcE(ALUSrcE),
+                        .Rs1E(Rs1E),
+                        .Rs2E(Rs2E),
+                        .Rs1D(Rs1D),
+                        .Rs2D(Rs2D),
+                        .clr(FlushE),
+                        .JumpE(JumpE),
+                        .pcsrc(pcsrc_predict),
+                        .branch_taken(branch_predict)
+                        );
 
-Hazard_Unit forwarding_block(. rst(rst) ,
-                             . RegWriteW(RegWriteW),
-                             . RegWriteM(RegWriteM),
-                             . RdM(RdM),
-                             . RdW(RdW),
-                             . Rs1_E(Rs1_E),
-                             . Rs2_E(Rs2_E),
-                             . ForwardAE(ForwardAE),
-                             . ForwardBE(ForwardBE));
+Execute_Cycle Execute_top(
+                            .clk(clk),
+                            .rst(rst),
+                            .RegWriteE(RegWriteE),
+                            .ResultSrcE(ResultSrcE),
+                            .MemWriteE(MemWriteE),
+                            .BranchE(BranchE),
+                            .ALUControlE(ALUControlE),
+                            .ALUSrcE(ALUSrcE),
+                            .RD1E(RD1E),
+                            .RD2E(RD2E),
+                            .PCE(PCE),
+                            .RdE(RdE),
+                            .ImmExtE(ImmExtE),
+                            .PCPlus4E(PCPlus4E),
+                            .RegWriteM(RegWriteM),
+                            .ResultSrcM(ResultSrcM),
+                            .MemWriteM(MemWriteM),
+                            .ALUResultM(ALUResultM),
+                            .WriteDataM(WriteDataM),
+                            .RdM(RdM),
+                            .PCSrcE(PCSrcE),
+                            .PCPlus4M(PCPlus4M),
+                            .PCTargetE(PCTargetE),
+                            .Rs1E(Rs1E),
+                            .Rs2E(Rs2E),
+                            .ResultW(ResultW),
+                            .ForwardBE(ForwardBE),
+                            .ForwardAE(ForwardAE),
+                            .JumpE(JumpE)
+                            );
+
+Memory_cycle Memory_top(
+                            .rst(rst),
+                            .clk(clk),
+                            .RegWriteM(RegWriteM),
+                            .ResultSrcM(ResultSrcM),
+                            .MemWriteM(MemWriteM),
+                            .ALUResultM(ALUResultM),
+                            .WriteDataM(WriteDataM),
+                            .RdM(RdM),
+                            .PCPlus4M(PCPlus4M),
+                            .RegWriteW(RegWriteW),
+                            .ResultSrcW(ResultSrcW),
+                            .ReadDataW(ReadDataW),
+                            .RdW(RdW),
+                            .PCPlus4W(PCPlus4W),
+                            .ALUResultW(ALUResultW)
+                            );
+
+Writeback_cycle Writeback_top(
+                            .clk(clk),
+                            .rst(rst),
+                            .ResultSrcW(ResultSrcW),
+                            .ReadDataW(ReadDataW),
+                            .ALUResultW(ALUResultW),
+                            .PCPlus4W(PCPlus4W),
+                            .ResultW(ResultW)
+                            );
+                            
+Hazard_unit Hazard_top(
+                          .rst(rst),
+                           .Rs1E(Rs1E),
+                           .Rs2E(Rs2E),
+                           .RdM(RdM),
+                            .RegWriteM(RegWriteM),
+                            .RdW(RdW),
+                            .RegWriteW(RegWriteW),
+                            .ForwardAE(ForwardAE),
+                            .ForwardBE(ForwardBE),
+                             .StallF(StallF),
+                             .StallD(StallD),
+                             .FlushE(FlushE),
+                             .ResultSrcE(ResultSrcE),
+                             .RdE(RdE),
+                             .Rs1D(Rs1D),
+                             .Rs2D(Rs2D),
+                             .PCSrcE(pcsrc_predict),
+                             .FlushD(FlushD)
+                            );
+                            
+Display_top display_pipeline(
+                            .clk(clk),
+                            .rst(rst),
+                            .ResultW(ResultW),
+                            .display(display),
+                          .display_1(display_1)
+                            );
+                           
+// this is use when we use fpga board otherwise remove clk1_s
+time1    pipeline_time(
+                       .clk1_s(clk1_s),
+                       .clk(clk)
+                        );
+
+                            
 endmodule
